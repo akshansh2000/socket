@@ -1,5 +1,7 @@
 #include <cctype>       // for isalpha and isnumeric
 #include <cstring>      // for C strings
+#include <filesystem>   // for copying files
+#include <fstream>      // for file opening
 #include <iostream>     // for standard input/output
 #include <netinet/in.h> // for sockaddr_in
 #include <sys/socket.h> // for socket functions
@@ -71,6 +73,30 @@ void ListenForMessages(int connection, int server) {
 
     if (buffer != oldBuffer) { // if something has changed in buffer
       printf("New message received from client: %s\n", buffer.c_str());
+
+      if (buffer.substr(0, 6) == "file::") { // if message is a file
+        string filename = buffer.substr(6);
+
+        // try copying, and in case of exception, return error
+        try {
+          filesystem::copy("client_files/" + filename,
+                           "server_files/" + filename,
+                           filesystem::copy_options::overwrite_existing);
+
+          cout << "File copied to ./server_files\n";
+        } catch (exception e) {
+          cout << "Error: file not found\n";
+
+          if (send(connection, "400", 4, 0) < 0) { // response code
+            printf("Could not send message (error code %d). Exiting...\n",
+                   errno);
+            exit(EXIT_FAILURE);
+          }
+
+          goto nextIter;
+        }
+      }
+
       if (buffer.substr(0, 14) != "end connection")
         if (send(connection, "200", 4, 0) < 0) { // response code
           printf("Could not send message (error code %d). Exiting...\n", errno);
@@ -89,6 +115,7 @@ void ListenForMessages(int connection, int server) {
       exit(0);
     }
 
+  nextIter:
     oldBuffer = buffer;         // replace old buffer with current buffer
     buffer = string(100, '\0'); // clear buffer
   }
