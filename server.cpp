@@ -6,8 +6,8 @@
 #include <unistd.h>     // for read and close
 using namespace std;
 
-int main() {
-  // create a socket (IPv4, TCP)
+// create a socket (IPv4, TCP)
+int CreateSocket() {
   int server = socket(AF_INET, SOCK_STREAM, 0);
 
   // in case of failure
@@ -17,7 +17,10 @@ int main() {
   }
 
   cout << "Server socket initialised.\n";
+  return server;
+}
 
+sockaddr_in BindSocketToAddress(int server) {
   // sockaddr_in structure is capable of handling internet addresses
   sockaddr_in address;
   address.sin_family = AF_INET; // to communicate over TCP/IP, using IPv4
@@ -31,7 +34,10 @@ int main() {
   }
 
   cout << "Socket bound to port 9999.\n";
+  return address;
+}
 
+int GetConnectionFromQueue(int server, sockaddr_in address) {
   // start listening, allow at most 1 connection to the socket
   if (listen(server, 1) < 0) {
     printf("Failed to listen on socket (error code %d). Exiting...\n", errno);
@@ -48,8 +54,11 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  cout << "Connected to client.\n";
+  cout << "Connected to client.\n\n";
+  return connection;
+}
 
+void ListenForMessages(int connection) {
   // two buffers to print messages only when buffer changes
   string buffer(100, '\0'), oldBuffer;
 
@@ -61,12 +70,19 @@ int main() {
 
     if (!strcmp(buffer.c_str(), "end connection")) {
       cout << "\nEnding connection. Exiting...\n";
-      return 0;
+      exit(0);
     }
 
     oldBuffer = buffer;         // replace old buffer with current buffer
     buffer = string(100, '\0'); // clear buffer
   }
+}
+
+int main() {
+  int server = CreateSocket();
+  sockaddr_in address = BindSocketToAddress(server);
+  int connection = GetConnectionFromQueue(server, address);
+  ListenForMessages(connection);
 
   // Send a message to the connection
   // std::string response = "Good talking to you\n";
