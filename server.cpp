@@ -58,18 +58,34 @@ int GetConnectionFromQueue(int server, sockaddr_in address) {
   return connection;
 }
 
-void ListenForMessages(int connection) {
+void ListenForMessages(int connection, int server) {
   // two buffers to print messages only when buffer changes
   string buffer(100, '\0'), oldBuffer;
 
   // keep listening for messages until "end connection" is received
   while (true) {
-    read(connection, &buffer[0], 100);
-    if (buffer != oldBuffer) // if something has changed in buffer
-      printf("New message received from client: %s\n", buffer.c_str());
+    if (read(connection, &buffer[0], 100) < 0) {
+      printf("Could not read from buffer (error code %d). Exiting...\n", errno);
+      exit(EXIT_FAILURE);
+    }
 
-    if (!strcmp(buffer.c_str(), "end connection")) {
+    if (buffer != oldBuffer) { // if something has changed in buffer
+      printf("New message received from client: %s\n", buffer.c_str());
+      if (buffer.substr(0, 14) != "end connection")
+        if (send(connection, "200", 4, 0) < 0) { // response code
+          printf("Could not send message (error code %d). Exiting...\n", errno);
+          exit(EXIT_FAILURE);
+        }
+    }
+
+    if (buffer.substr(0, 14) == "end connection") {
       cout << "\nEnding connection. Exiting...\n";
+
+      if (send(connection, "404", 4, 0) < 0) { // response code
+        printf("Could not send message (error code %d). Exiting...\n", errno);
+        exit(EXIT_FAILURE);
+      }
+
       exit(0);
     }
 
@@ -82,7 +98,7 @@ int main() {
   int server = CreateSocket();
   sockaddr_in address = BindSocketToAddress(server);
   int connection = GetConnectionFromQueue(server, address);
-  ListenForMessages(connection);
+  ListenForMessages(connection, server);
 
   // Send a message to the connection
   // std::string response = "Good talking to you\n";
