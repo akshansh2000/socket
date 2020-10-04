@@ -1,3 +1,4 @@
+#include <cctype>       // for isalpha and isnumeric
 #include <cstring>      // for C strings
 #include <iostream>     // for standard input/output
 #include <netinet/in.h> // for sockaddr_in
@@ -50,22 +51,28 @@ int main() {
   cout << "Connected to client.\n";
 
   // two buffers to print messages only when buffer changes
-  char buffer[100], oldBuffer[100];
+  string buffer(100, '\0'), oldBuffer;
 
   // keep listening for messages until "end connection" is received
   while (true) {
-    read(connection, buffer, 100);      // read 100 bytes from buffer
-    if (strcmp(buffer, oldBuffer) != 0) // if something has changed in buffer
-      printf("New message received from client: %s\n", buffer);
+    read(connection, &buffer[0], 100);
+    if (buffer != oldBuffer) // if something has changed in buffer
+      printf("New message received from client: %s\n", buffer.c_str());
 
-    strcpy(oldBuffer, buffer); // replace old buffer with current buffer
+    if (!strcmp(buffer.c_str(), "end connection")) {
+      cout << "\nEnding connection. Exiting...\n";
+      return 0;
+    }
+
+    oldBuffer = buffer;         // replace old buffer with current buffer
+    buffer = string(100, '\0'); // clear buffer
   }
 
   // Send a message to the connection
   // std::string response = "Good talking to you\n";
   // send(connection, response.c_str(), response.size(), 0);
 
-  // Close the connections
+  // close the connections
   close(connection);
   close(server);
 }
