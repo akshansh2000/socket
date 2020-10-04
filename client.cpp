@@ -39,11 +39,7 @@ sockaddr_in ConnectSocketToAddress(int client, int &connection) {
   return address;
 }
 
-int main() {
-  int client = CreateSocket();
-  int connection = -1;
-  sockaddr_in address = ConnectSocketToAddress(client, connection);
-
+void SendMessages(int client) {
   string message;
   while (message != "end connection") {
     cout << "Enter message: ";
@@ -66,6 +62,13 @@ int main() {
       printf("The server replied with code: 404 (server no longer exists). "
              "Exiting...\n");
   }
+}
+
+int main() {
+  int client = CreateSocket();
+  int connection = -1;
+  sockaddr_in address = ConnectSocketToAddress(client, connection);
+  SendMessages(client);
 
   // close the connections
   close(client);

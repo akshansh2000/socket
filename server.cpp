@@ -100,10 +100,6 @@ int main() {
   int connection = GetConnectionFromQueue(server, address);
   ListenForMessages(connection, server);
 
-  // Send a message to the connection
-  // std::string response = "Good talking to you\n";
-  // send(connection, response.c_str(), response.size(), 0);
-
   // close the connections
   close(connection);
   close(server);
