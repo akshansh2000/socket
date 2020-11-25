@@ -8,6 +8,10 @@
 #include <unistd.h>     // for read and close
 using namespace std;
 
+// functions for RPC testing follow (add and subtract)
+int add(int first, int second) { return first + second; }
+int subtract(int first, int second) { return first - second; }
+
 // create a socket (IPv4, TCP)
 int CreateSocket() {
   int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -105,12 +109,56 @@ void ListenForMessages(int connection, int server) {
         }
       }
 
-      if (buffer.substr(0, 14) != "end connection")
-        if (send(connection, "200", 4, 0) < 0) { // response code
-          printf("Could not send message (error code %d). Exiting...\n", errno);
-          exit(EXIT_FAILURE);
+      else if (buffer.substr(0, 6) == "func::") {
+        string func_name;
+        for (int idx = 6; buffer[idx] != ' ' && buffer[idx] != '\0'; ++idx)
+          func_name += buffer[idx];
+
+        if (func_name != "add" && func_name != "subtract") {
+          cout << "Error: function not found\n";
+
+          if (send(connection, "400", 4, 0) < 0) { // response code
+            printf("Could not send message (error code %d). Exiting...\n",
+                   errno);
+            exit(EXIT_FAILURE);
+          }
+
+          goto nextIter;
         }
+
+        auto getNumLen = [](int num) {
+          int len = 0;
+
+          while (num) {
+            num /= 10;
+            ++len;
+          }
+
+          return len;
+        };
+
+        if (func_name == "add") {
+          int first = stoi(buffer.substr(9));
+          int second = stoi(buffer.substr(10 + getNumLen(first)));
+
+          printf("Function request received from client: add(%d, %d) --> %d\n",
+                 first, second, add(first, second));
+        } else if (func_name == "subtract") {
+          int first = stoi(buffer.substr(14));
+          int second = stoi(buffer.substr(15 + getNumLen(first)));
+
+          printf("Function request received from client: subtract(%d, %d) "
+                 "--> %d\n",
+                 first, second, subtract(first, second));
+        }
+      }
     }
+
+    if (buffer.substr(0, 14) != "end connection")
+      if (send(connection, "200", 4, 0) < 0) { // response code
+        printf("Could not send message (error code %d). Exiting...\n", errno);
+        exit(EXIT_FAILURE);
+      }
 
     if (buffer.substr(0, 14) == "end connection") {
       cout << "\nEnding connection. Exiting...\n";
