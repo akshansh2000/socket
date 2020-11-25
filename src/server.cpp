@@ -74,16 +74,24 @@ void ListenForMessages(int connection, int server) {
     if (buffer != oldBuffer) { // if something has changed in buffer
       printf("New message received from client: %s\n", buffer.c_str());
 
-      if (buffer.substr(0, 6) == "file::") { // if message is a file
-        string filename = buffer.substr(6);
+      if (buffer.substr(0, 7) == "fileS::" ||
+          buffer.substr(0, 7) == "fileR::") { // if message is a file
+        string filename = buffer.substr(7);
 
         // try copying, and in case of exception, return error
         try {
-          filesystem::copy("client_files/" + filename,
-                           "server_files/" + filename,
-                           filesystem::copy_options::overwrite_existing);
+          if (buffer.substr(0, 7) == "fileS::")
+            filesystem::copy("client_files/" + filename,
+                             "server_files/" + filename,
+                             filesystem::copy_options::overwrite_existing);
+          else
+            filesystem::copy("server_files/" + filename,
+                             "client_files/" + filename,
+                             filesystem::copy_options::overwrite_existing);
 
-          cout << "File copied to ./server_files\n";
+          cout << ((buffer.substr(0, 7) == "fileS::")
+                       ? "File copied to ./server_files\n"
+                       : "File copied to ./client_files\n");
         } catch (exception e) {
           cout << "Error: file not found\n";
 
